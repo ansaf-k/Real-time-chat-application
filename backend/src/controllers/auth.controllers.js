@@ -6,33 +6,34 @@ import cloudinary from "../config/cloudinary.js";
 export const signup = async (req, res) => {
     const { name, email, password } = req.body;
     try {
-
-        if (!name || !email || !password) {
-            return res.status(400).json({ message: "Please provide all required fields" });
+        // validate input fields
+        if (!name && !email && !password) {
+            return res.status(400).json({ message: "All fields are required" });
         }
 
+        // check password length
         if (password.length < 6) {
             return res.status(400).json({ message: "Password must be at least 6 characters" });
         }
 
-        const user = await User.findOne({ email })
+        const existingUser = await User.findOne({ email });
 
-        if (user) return res.status(400).json({ message: "User already exists" });
-        const salt = await bcrypt.genSalt(10)
-        const hashedPassworrd = await bcrypt.hash(password, salt)
+        if (existingUser) return res.status(400).json({ message: "Email already exists" });
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        console.log(name, email, hashedPassword);
 
         const newUser = new User({
             name,
             email,
-            password: hashedPassworrd
+            password: hashedPassword,
         });
+
 
         if (newUser) {
             // generate jwt token here
-            generateToken(res, newUser._id)
-            console.log("User created");
-            await newUser.save();
-
+            generateToken(res, newUser._id);
             res.status(201).json({
                 _id: newUser._id,
                 name: newUser.name,
@@ -40,14 +41,14 @@ export const signup = async (req, res) => {
                 profilePic: newUser.profilePic,
             });
         } else {
-            res.status(400).json({ message: "Invalid User data" });
+            res.status(400).json({ message: "Invalid user data" });
         }
-
     } catch (error) {
-        console.log("error in signup controller:", error.message);
-        res.status(500).json({ message: "Internal server Error" });
+        console.log("Error in signup controller", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
-}
+};
+
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
